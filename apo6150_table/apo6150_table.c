@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
 	int delay[4];
 	int delay_ee[4];
 
-	/* APO3 ADC and voltage divider */
+	/* APO6150 ADC and voltage divider */
 	double rtop, rbottom;
 	double vdiv_ratio;
 
@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
 	double vref;
 	double v_per_bit;
 
-	printf("# configuration information - hard coded for APO3c24:\n");
+	printf("# configuration information - hard coded for APO6150:\n");
 
 	rtop=49900.0;
 	rbottom=10000.0;
@@ -123,7 +123,7 @@ for ( i=0; i<4 ; i++ ) {
 }
 printf("} seconds */\n");
 
-printf("\t0x00, 0x00, 0x00, 0x02 } /* SERIAL NUMBER is always 2 for APO3C24 */\n");
+printf("\t0x00, 0x00, 0x00, 0x02 } /* SERIAL NUMBER is always 2 for APO6150 - signifies auto 12/24 volt */\n");
 
 
 
