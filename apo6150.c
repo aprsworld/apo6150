@@ -29,9 +29,9 @@
 #define EE_MODEL     0x1B /* model. 1=>APO6150 2=>APO6150_24V (R1 = 49.9k) */
 
 /* "serial numbers" that are used for programattically setting various configurations */
-#define SN_12V       0x01 /* standard APO3c 12 volt only */
-#define SN_12V_24V   0x02 /* solid state APO3c (with R1=49.9k) that works as 12V or 24V */
-#define SN_12V_BRECO 0x03 /* APO3c 12 volt with hysteresis and adjustable on and off voltages ... for Breco *./
+#define SN_12V       0x01 /* not used. Was 12V only APO3 */
+#define SN_12V_24V   0x02 /* APO6150 that works as 12V or 24V */
+#define SN_12V_BRECO 0x03 /* APO3c 12 volt with hysteresis and adjustable on and off voltages ... for Breco ... not tested with APO6150*/
 
 /*
 todo:
@@ -67,25 +67,29 @@ int16 configuration_lvr;
 int16 configuration_delay;
 
 static int8 powersaveCount;
+static int8 contactorState=255;
 
-#inline
-void start_timeout_count(void) {
-	/* shut off coils after 1 to 2 seconds */
-	powersaveCount=2;
-}
 
 void contactor_on(void) {
-	start_timeout_count();
+	if ( 1 != contactorState ) {
+		powersaveCount=1;
 
-	output_high(BRIDGE_A);
-	output_low(BRIDGE_B);
+		output_low(BRIDGE_A);
+		output_high(BRIDGE_B);
+
+		contactorState=1;
+	}
 }
 
 void contactor_off(void) {
-	start_timeout_count();
+	if ( 0 != contactorState ) {
+		powersaveCount=1;
 
-	output_low(BRIDGE_A);
-	output_high(BRIDGE_B);
+		output_high(BRIDGE_A);
+		output_low(BRIDGE_B);
+
+		contactorState=0;
+	}
 }
 
 
@@ -140,8 +144,8 @@ void get_threshold(void) {
 	configuration_lvr = read_eeprom_int16(EE_LVR+sw*2);
 
 	/* 
-	check if we have an APO3c24. If we do, then we check voltage and determine if we have 12 volt or 24 volt battery.
-	If 24 volts battery, , we double our LVD and LVR set points 
+	check if we have a 12/24V configuration. If we do, then we check voltage and determine if we have 12 volt or 24 volt battery.
+	If 24 volts battery, we double our LVD and LVR set points 
 	*/
 	if ( SN_12V_24V == read_eeprom(EE_MODEL) && read_adc_average(VSENSE_ADC) > 615 ) {
 		configuration_lvd *= 2;
@@ -202,10 +206,15 @@ void init_hardware(void) {
 
 	/* set the direction of port_a */
 	set_tris_a(0b00111111);
+    /*           76543210 */
+
 	/* setup pullups for switches (individually addressable) */
 	port_a_pullups(0b00111111);
+
 	/* set the direction of port_c */
 	set_tris_c(0b00001001);
+    /*           76543210 */
+
 
 	/* setup our timer to be 1.048576 second */
 	setup_timer_0(RTCC_INTERNAL|RTCC_8_BIT|RTCC_DIV_128);
@@ -222,10 +231,18 @@ void init_hardware(void) {
 	decide_now=1;
 }
 
-
+void led_flash(int8 n) {
+	int8 i;
+	for ( i=0 ; i<n ; i++ ) {
+		restart_wdt();
+		output_high(LED_STATUS);
+		delay_ms(500);
+		output_low(LED_STATUS);
+		delay_ms(500);
+	}
+}
 
 void main(void) {
-	int8 i;
 	int16 adc;
 
 	int8  on_delay;
@@ -238,18 +255,9 @@ void main(void) {
 
 	on_delay=ON_DELAY_SECONDS;
 	off_delay=configuration_delay;
-	
 
-
-
-	/* flash the LED 5 times on startup ... non-hysteresis APO3C firmware flashes 10 times on startup */
-	for ( i=0 ; i<5 ; i++ ) {
-		restart_wdt();
-		output_high(LED_STATUS);
-		delay_ms(200);
-		output_low(LED_STATUS);
-		delay_ms(200);
-	}
+	/* flash the LED 5 times on startup ... non-hysteresis APOx firmware flashes 10 times on startup */
+	led_flash(5);
 
 	power=0;
 

@@ -1,9 +1,9 @@
-CCS PCM C Compiler, Version 4.090, 47882               08-Nov-18 11:45
+CCS PCM C Compiler, Version 4.090, 47882               08-Nov-18 16:00
 
                Filename: apo6150.lst
 
-               ROM used: 441 words (25%)
-                         Largest free fragment is 1351
+               ROM used: 463 words (26%)
+                         Largest free fragment is 1329
                RAM used: 29 (25%) at main() level
                          34 (29%) worst case
                Stack:    3 worst case (2 in main + 1 for interrupts)
@@ -12,7 +12,7 @@ CCS PCM C Compiler, Version 4.090, 47882               08-Nov-18 11:45
 0000:  NOP
 0001:  MOVLW  01
 0002:  MOVWF  0A
-0003:  GOTO   138
+0003:  GOTO   159
 0004:  BTFSC  03.5
 0005:  GOTO   00A
 0006:  MOVWF  25
@@ -77,7 +77,7 @@ CCS PCM C Compiler, Version 4.090, 47882               08-Nov-18 11:45
 .................... #FUSES INTRC_IO, NOMCLR, NOWDT, NOPROTECT, PUT, NOIESO, NOFCMEN, NOCPD 
 .................... #use delay(clock=125000) 
 *
-008E:  MOVLW  3F
+008E:  MOVLW  40
 008F:  MOVWF  04
 0090:  MOVF   00,W
 0091:  BTFSC  03.2
@@ -115,9 +115,9 @@ CCS PCM C Compiler, Version 4.090, 47882               08-Nov-18 11:45
 .................... #define EE_MODEL     0x1B /* model. 1=>APO6150 2=>APO6150_24V (R1 = 49.9k) */ 
 ....................  
 .................... /* "serial numbers" that are used for programattically setting various configurations */ 
-.................... #define SN_12V       0x01 /* standard APO3c 12 volt only */ 
-.................... #define SN_12V_24V   0x02 /* solid state APO3c (with R1=49.9k) that works as 12V or 24V */ 
-.................... #define SN_12V_BRECO 0x03 /* APO3c 12 volt with hysteresis and adjustable on and off voltages ... for Breco *./ 
+.................... #define SN_12V       0x01 /* not used. Was 12V only APO3 */ 
+.................... #define SN_12V_24V   0x02 /* APO6150 that works as 12V or 24V */ 
+.................... #define SN_12V_BRECO 0x03 /* APO3c 12 volt with hysteresis and adjustable on and off voltages ... for Breco ... not tested with APO6150*/ 
 ....................  
 .................... /* 
 .................... todo: 
@@ -154,41 +154,52 @@ CCS PCM C Compiler, Version 4.090, 47882               08-Nov-18 11:45
 ....................  
 .................... static int8 powersaveCount; 
 *
-0148:  CLRF   35
+0169:  CLRF   35
+.................... static int8 contactorState=255; 
+016A:  MOVLW  FF
+016B:  MOVWF  36
 ....................  
-.................... #inline 
-.................... void start_timeout_count(void) { 
-.................... 	/* shut off coils after 1 to 2 seconds */ 
-.................... 	powersaveCount=2; 
-*
-012E:  MOVLW  02
-012F:  MOVWF  35
-*
-0133:  MOVLW  02
-0134:  MOVWF  35
-.................... } 
 ....................  
 .................... void contactor_on(void) { 
-.................... 	start_timeout_count(); 
-....................  
-.................... 	output_high(BRIDGE_A); 
+.................... 	if ( 1 != contactorState ) { 
 *
-0130:  BSF    07.1
-.................... 	output_low(BRIDGE_B); 
-0131:  BCF    07.4
+0147:  DECFSZ 36,W
+0148:  GOTO   14A
+0149:  GOTO   14F
+.................... 		powersaveCount=1; 
+014A:  MOVLW  01
+014B:  MOVWF  35
+....................  
+.................... 		output_low(BRIDGE_A); 
+014C:  BCF    07.1
+.................... 		output_high(BRIDGE_B); 
+014D:  BSF    07.4
+....................  
+.................... 		contactorState=1; 
+014E:  MOVWF  36
+.................... 	} 
 .................... } 
-0132:  GOTO   16B (RETURN)
+014F:  GOTO   181 (RETURN)
 ....................  
 .................... void contactor_off(void) { 
-.................... 	start_timeout_count(); 
+.................... 	if ( 0 != contactorState ) { 
+0150:  MOVF   36,F
+0151:  BTFSC  03.2
+0152:  GOTO   158
+.................... 		powersaveCount=1; 
+0153:  MOVLW  01
+0154:  MOVWF  35
 ....................  
-.................... 	output_low(BRIDGE_A); 
-*
-0135:  BCF    07.1
-.................... 	output_high(BRIDGE_B); 
-0136:  BSF    07.4
+.................... 		output_high(BRIDGE_A); 
+0155:  BSF    07.1
+.................... 		output_low(BRIDGE_B); 
+0156:  BCF    07.4
+....................  
+.................... 		contactorState=0; 
+0157:  CLRF   36
+.................... 	} 
 .................... } 
-0137:  GOTO   16D (RETURN)
+0158:  GOTO   183 (RETURN)
 ....................  
 ....................  
 ....................  
@@ -358,8 +369,8 @@ CCS PCM C Compiler, Version 4.090, 47882               08-Nov-18 11:45
 00DF:  MOVWF  31
 ....................  
 .................... 	/*  
-.................... 	check if we have an APO3c24. If we do, then we check voltage and determine if we have 12 volt or 24 volt battery. 
-.................... 	If 24 volts battery, , we double our LVD and LVR set points  
+.................... 	check if we have a 12/24V configuration. If we do, then we check voltage and determine if we have 12 volt or 24 volt battery. 
+.................... 	If 24 volts battery, we double our LVD and LVR set points  
 .................... 	*/ 
 .................... 	if ( SN_12V_24V == read_eeprom(EE_MODEL) && read_adc_average(VSENSE_ADC) > 615 ) { 
 00E0:  MOVLW  1B
@@ -412,7 +423,7 @@ CCS PCM C Compiler, Version 4.090, 47882               08-Nov-18 11:45
 0108:  MOVLW  04
 0109:  MOVWF  3E
 010A:  MOVLW  E1
-010B:  MOVWF  3F
+010B:  MOVWF  40
 010C:  CALL   08E
 010D:  DECFSZ 3E,F
 010E:  GOTO   10A
@@ -420,7 +431,7 @@ CCS PCM C Compiler, Version 4.090, 47882               08-Nov-18 11:45
 010F:  BCF    07.5
 .................... 		delay_ms(100); 
 0110:  MOVLW  64
-0111:  MOVWF  3F
+0111:  MOVWF  40
 0112:  CALL   08E
 0113:  BSF    03.5
 0114:  NOP
@@ -524,14 +535,19 @@ CCS PCM C Compiler, Version 4.090, 47882               08-Nov-18 11:45
 .................... 	set_tris_a(0b00111111); 
 00B6:  MOVLW  3F
 00B7:  MOVWF  05
+....................     /*           76543210 */ 
+....................  
 .................... 	/* setup pullups for switches (individually addressable) */ 
 .................... 	port_a_pullups(0b00111111); 
 00B8:  MOVWF  15
 00B9:  BCF    01.7
+....................  
 .................... 	/* set the direction of port_c */ 
 .................... 	set_tris_c(0b00001001); 
 00BA:  MOVLW  09
 00BB:  MOVWF  07
+....................     /*           76543210 */ 
+....................  
 ....................  
 .................... 	/* setup our timer to be 1.048576 second */ 
 .................... 	setup_timer_0(RTCC_INTERNAL|RTCC_8_BIT|RTCC_DIV_128); 
@@ -560,29 +576,62 @@ CCS PCM C Compiler, Version 4.090, 47882               08-Nov-18 11:45
 012B:  MOVLW  01
 012C:  MOVWF  2E
 .................... } 
-012D:  GOTO   14A (RETURN)
+012D:  GOTO   16D (RETURN)
 ....................  
-....................  
+.................... void led_flash(int8 n) { 
+.................... 	int8 i; 
+.................... 	for ( i=0 ; i<n ; i++ ) { 
+012E:  CLRF   3E
+012F:  MOVF   3D,W
+0130:  SUBWF  3E,W
+0131:  BTFSC  03.0
+0132:  GOTO   146
+.................... 		restart_wdt(); 
+0133:  CLRWDT
+.................... 		output_high(LED_STATUS); 
+0134:  BSF    07.5
+.................... 		delay_ms(500); 
+0135:  MOVLW  02
+0136:  MOVWF  3F
+0137:  MOVLW  FA
+0138:  MOVWF  40
+0139:  CALL   08E
+013A:  DECFSZ 3F,F
+013B:  GOTO   137
+.................... 		output_low(LED_STATUS); 
+013C:  BCF    07.5
+.................... 		delay_ms(500); 
+013D:  MOVLW  02
+013E:  MOVWF  3F
+013F:  MOVLW  FA
+0140:  MOVWF  40
+0141:  CALL   08E
+0142:  DECFSZ 3F,F
+0143:  GOTO   13F
+.................... 	} 
+0144:  INCF   3E,F
+0145:  GOTO   12F
+.................... } 
+0146:  GOTO   176 (RETURN)
 ....................  
 .................... void main(void) { 
 *
-0138:  CLRF   04
-0139:  MOVLW  1F
-013A:  ANDWF  03,F
-013B:  MOVLW  11
-013C:  BSF    03.5
-013D:  MOVWF  0F
-013E:  MOVF   0F,W
-013F:  BCF    03.5
-0140:  BCF    1F.6
-0141:  MOVLW  00
-0142:  BSF    03.5
-0143:  MOVWF  11
-0144:  BCF    03.5
-0145:  CLRF   1A
-0146:  MOVLW  07
-0147:  MOVWF  19
-.................... 	int8 i; 
+0159:  CLRF   04
+015A:  MOVLW  1F
+015B:  ANDWF  03,F
+015C:  MOVLW  11
+015D:  BSF    03.5
+015E:  MOVWF  0F
+015F:  MOVF   0F,W
+0160:  BCF    03.5
+0161:  BCF    1F.6
+0162:  MOVLW  00
+0163:  BSF    03.5
+0164:  MOVWF  11
+0165:  BCF    03.5
+0166:  CLRF   1A
+0167:  MOVLW  07
+0168:  MOVWF  19
 .................... 	int16 adc; 
 ....................  
 .................... 	int8  on_delay; 
@@ -592,185 +641,163 @@ CCS PCM C Compiler, Version 4.090, 47882               08-Nov-18 11:45
 .................... 	/* initialize hardware */ 
 .................... 	init_hardware(); 
 *
-0149:  GOTO   09A
+016C:  GOTO   09A
 ....................  
 ....................  
 .................... 	on_delay=ON_DELAY_SECONDS; 
-014A:  MOVLW  05
-014B:  MOVWF  39
+016D:  MOVLW  05
+016E:  MOVWF  39
 .................... 	off_delay=configuration_delay; 
-014C:  MOVF   34,W
-014D:  MOVWF  3B
-014E:  MOVF   33,W
-014F:  MOVWF  3A
-.................... 	 
+016F:  MOVF   34,W
+0170:  MOVWF  3B
+0171:  MOVF   33,W
+0172:  MOVWF  3A
 ....................  
-....................  
-....................  
-.................... 	/* flash the LED 5 times on startup ... non-hysteresis APO3C firmware flashes 10 times on startup */ 
-.................... 	for ( i=0 ; i<5 ; i++ ) { 
-0150:  CLRF   36
-0151:  MOVF   36,W
-0152:  SUBLW  04
-0153:  BTFSS  03.0
-0154:  GOTO   160
-.................... 		restart_wdt(); 
-0155:  CLRWDT
-.................... 		output_high(LED_STATUS); 
-0156:  BSF    07.5
-.................... 		delay_ms(200); 
-0157:  MOVLW  C8
-0158:  MOVWF  3F
-0159:  CALL   08E
-.................... 		output_low(LED_STATUS); 
-015A:  BCF    07.5
-.................... 		delay_ms(200); 
-015B:  MOVLW  C8
-015C:  MOVWF  3F
-015D:  CALL   08E
-.................... 	} 
-015E:  INCF   36,F
-015F:  GOTO   151
+.................... 	/* flash the LED 5 times on startup ... non-hysteresis APOx firmware flashes 10 times on startup */ 
+.................... 	led_flash(5); 
+0173:  MOVLW  05
+0174:  MOVWF  3D
+0175:  GOTO   12E
 ....................  
 .................... 	power=0; 
-0160:  BCF    3C.0
+0176:  BCF    3C.0
 ....................  
 .................... 	/* main loop */ 
 .................... 	for ( ; ; ) { 
 .................... 		restart_wdt(); 
-0161:  CLRWDT
+0177:  CLRWDT
 ....................  
 .................... 		/* actually flip the power relay */ 
 .................... 		if ( 1==power || ! input(SW_OVERRIDE) ) { 
-0162:  MOVLW  00
-0163:  BTFSC  3C.0
-0164:  MOVLW  01
-0165:  SUBLW  01
-0166:  BTFSC  03.2
-0167:  GOTO   16A
-0168:  BTFSC  05.4
-0169:  GOTO   16C
+0178:  MOVLW  00
+0179:  BTFSC  3C.0
+017A:  MOVLW  01
+017B:  SUBLW  01
+017C:  BTFSC  03.2
+017D:  GOTO   180
+017E:  BTFSC  05.4
+017F:  GOTO   182
 .................... 			contactor_on(); 
-016A:  GOTO   12E
+0180:  GOTO   147
 .................... 		} else { 
-016B:  GOTO   16D
+0181:  GOTO   183
 .................... 			contactor_off(); 
-016C:  GOTO   133
+0182:  GOTO   150
 .................... 		} 
 ....................  
 .................... 		if ( decide_now ) { 
-016D:  MOVF   2E,F
-016E:  BTFSC  03.2
-016F:  GOTO   1B7
+0183:  MOVF   2E,F
+0184:  BTFSC  03.2
+0185:  GOTO   1CD
 .................... 			decide_now=0; 
-0170:  CLRF   2E
+0186:  CLRF   2E
 ....................  
 .................... 			adc=read_adc_average(VSENSE_ADC); 
-0171:  MOVLW  07
-0172:  MOVWF  3E
-0173:  CALL   060
-0174:  MOVF   22,W
-0175:  MOVWF  38
-0176:  MOVF   21,W
-0177:  MOVWF  37
+0187:  MOVLW  07
+0188:  MOVWF  3E
+0189:  CALL   060
+018A:  MOVF   22,W
+018B:  MOVWF  38
+018C:  MOVF   21,W
+018D:  MOVWF  37
 .................... 	 
 .................... 			if ( adc > configuration_lvd ) 
-0178:  MOVF   30,W
-0179:  SUBWF  38,W
-017A:  BTFSS  03.0
-017B:  GOTO   184
-017C:  BTFSS  03.2
-017D:  GOTO   182
-017E:  MOVF   37,W
-017F:  SUBWF  2F,W
-0180:  BTFSC  03.0
-0181:  GOTO   184
+018E:  MOVF   30,W
+018F:  SUBWF  38,W
+0190:  BTFSS  03.0
+0191:  GOTO   19A
+0192:  BTFSS  03.2
+0193:  GOTO   198
+0194:  MOVF   37,W
+0195:  SUBWF  2F,W
+0196:  BTFSC  03.0
+0197:  GOTO   19A
 .................... 				output_high(VGOOD); 
-0182:  BSF    07.2
+0198:  BSF    07.2
 .................... 			else 
-0183:  GOTO   185
+0199:  GOTO   19B
 .................... 				output_low(VGOOD); 
-0184:  BCF    07.2
+019A:  BCF    07.2
 .................... 	 
 .................... 	 
 .................... 			if ( adc > configuration_lvr ) { 
-0185:  MOVF   32,W
-0186:  SUBWF  38,W
-0187:  BTFSS  03.0
-0188:  GOTO   197
-0189:  BTFSS  03.2
-018A:  GOTO   18F
-018B:  MOVF   37,W
-018C:  SUBWF  31,W
-018D:  BTFSC  03.0
-018E:  GOTO   197
+019B:  MOVF   32,W
+019C:  SUBWF  38,W
+019D:  BTFSS  03.0
+019E:  GOTO   1AD
+019F:  BTFSS  03.2
+01A0:  GOTO   1A5
+01A1:  MOVF   37,W
+01A2:  SUBWF  31,W
+01A3:  BTFSC  03.0
+01A4:  GOTO   1AD
 .................... 				if ( on_delay > 0 ) { 
-018F:  MOVF   39,F
-0190:  BTFSC  03.2
-0191:  GOTO   194
+01A5:  MOVF   39,F
+01A6:  BTFSC  03.2
+01A7:  GOTO   1AA
 .................... 					on_delay--; 
-0192:  DECF   39,F
+01A8:  DECF   39,F
 .................... 				} else { 
-0193:  GOTO   196
+01A9:  GOTO   1AC
 .................... 					power=1; 
-0194:  BSF    3C.0
+01AA:  BSF    3C.0
 .................... 					output_low(LED_STATUS); 
-0195:  BCF    07.5
+01AB:  BCF    07.5
 .................... 				} 
 .................... 			} else { 
-0196:  GOTO   199
+01AC:  GOTO   1AF
 .................... 				on_delay = 5; /* 5 seconds before re-connecting */ 
-0197:  MOVLW  05
-0198:  MOVWF  39
+01AD:  MOVLW  05
+01AE:  MOVWF  39
 .................... 			} 
 .................... 		 
 .................... 			if ( adc < configuration_lvd ) { 
-0199:  MOVF   38,W
-019A:  SUBWF  30,W
-019B:  BTFSS  03.0
-019C:  GOTO   1B2
-019D:  BTFSS  03.2
-019E:  GOTO   1A3
-019F:  MOVF   2F,W
-01A0:  SUBWF  37,W
-01A1:  BTFSC  03.0
-01A2:  GOTO   1B2
+01AF:  MOVF   38,W
+01B0:  SUBWF  30,W
+01B1:  BTFSS  03.0
+01B2:  GOTO   1C8
+01B3:  BTFSS  03.2
+01B4:  GOTO   1B9
+01B5:  MOVF   2F,W
+01B6:  SUBWF  37,W
+01B7:  BTFSC  03.0
+01B8:  GOTO   1C8
 .................... 				if ( off_delay > 0 ) { 
-01A3:  MOVF   3A,F
-01A4:  BTFSS  03.2
-01A5:  GOTO   1A9
-01A6:  MOVF   3B,F
-01A7:  BTFSC  03.2
-01A8:  GOTO   1AF
+01B9:  MOVF   3A,F
+01BA:  BTFSS  03.2
+01BB:  GOTO   1BF
+01BC:  MOVF   3B,F
+01BD:  BTFSC  03.2
+01BE:  GOTO   1C5
 .................... 					off_delay--; 
-01A9:  MOVF   3A,W
-01AA:  BTFSC  03.2
-01AB:  DECF   3B,F
-01AC:  DECF   3A,F
+01BF:  MOVF   3A,W
+01C0:  BTFSC  03.2
+01C1:  DECF   3B,F
+01C2:  DECF   3A,F
 .................... 					output_high(LED_STATUS); 
-01AD:  BSF    07.5
+01C3:  BSF    07.5
 .................... 				} else { 
-01AE:  GOTO   1B1
+01C4:  GOTO   1C7
 .................... 					power=0; 
-01AF:  BCF    3C.0
+01C5:  BCF    3C.0
 .................... 					output_low(LED_STATUS); 
-01B0:  BCF    07.5
+01C6:  BCF    07.5
 .................... 				} 
 .................... 			} else { 
-01B1:  GOTO   1B6
+01C7:  GOTO   1CC
 .................... 				off_delay = configuration_delay; 
-01B2:  MOVF   34,W
-01B3:  MOVWF  3B
-01B4:  MOVF   33,W
-01B5:  MOVWF  3A
+01C8:  MOVF   34,W
+01C9:  MOVWF  3B
+01CA:  MOVF   33,W
+01CB:  MOVWF  3A
 .................... 			} 
 .................... 			restart_wdt(); 
-01B6:  CLRWDT
+01CC:  CLRWDT
 .................... 		} 
 .................... 	} 
-01B7:  GOTO   161
+01CD:  GOTO   177
 .................... } 
-01B8:  GOTO   1B8
+01CE:  GOTO   1CE
 
 Configuration Fuses:
    Word  1: 30D4   INTRC_IO NOPROTECT NOBROWNOUT NOMCLR NOCPD NOWDT NOPUT NOIESO NOFCMEN
