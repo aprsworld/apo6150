@@ -23,9 +23,9 @@ int main(int argc, char **argv) {
 	double vref;
 	double v_per_bit;
 
-	printf("# configuration information - hard coded for APO3c:\n");
+	printf("# configuration information - hard coded for APO3c24:\n");
 
-	rtop=22000.0;
+	rtop=49900.0;
 	rbottom=10000.0;
 	vdiv_ratio = rbottom / ( rtop + rbottom );
 	printf("\trtop=%0.1f rbottom=%0.1f vdiv_ratio=%0.4f\n",rtop,rbottom,vdiv_ratio);
@@ -123,7 +123,7 @@ for ( i=0; i<4 ; i++ ) {
 }
 printf("} seconds */\n");
 
-printf("\t0x00, 0x00, 0x00, 0x01 } /* SERIAL NUMBER is always 1 */\n");
+printf("\t0x00, 0x00, 0x00, 0x02 } /* SERIAL NUMBER is always 2 for APO3C24 */\n");
 
 
 
