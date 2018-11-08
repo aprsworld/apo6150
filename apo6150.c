@@ -26,7 +26,7 @@
 #define EE_LVR       0x08 /* low voltage re-connect */
 #define EE_DELAY     0x10 /* delay before LVD */
 #define EE_SN        0x18 /* serial number */
-#define EE_MODEL     0x1B /* model. 1=>APO3c 2=>APO3c24 (R1 = 49.9k) */
+#define EE_MODEL     0x1B /* model. 1=>APO6150 2=>APO6150_24V (R1 = 49.9k) */
 
 /* "serial numbers" that are used for programattically setting various configurations */
 #define SN_12V       0x01 /* standard APO3c 12 volt only */
