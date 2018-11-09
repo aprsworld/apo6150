@@ -69,6 +69,8 @@ int16 configuration_delay;
 static int8 powersaveCount;
 static int8 contactorState=255;
 
+static int8 ledBlink; /* set to make LED blink at 1 Hz */
+
 
 void contactor_on(void) {
 	if ( 1 != contactorState ) {
@@ -96,9 +98,6 @@ void contactor_off(void) {
 
 #int_timer0
 void isr_timer0 (void) {
-//	output_toggle(LED_STATUS);
-
-
 	decide_now=1;
 
 
@@ -109,6 +108,11 @@ void isr_timer0 (void) {
 	} else {
 		powersaveCount--;
 	}
+	
+	if ( ledBlink ) {
+		output_toggle(LED_STATUS);
+	}	
+
 }
 
 /* take the average of 8 ADC readings */
@@ -265,13 +269,28 @@ void main(void) {
 	for ( ; ; ) {
 		restart_wdt();
 
-		/* actually flip the power relay */
-		if ( 1==power || ! input(SW_OVERRIDE) ) {
+		/* set the contactor based on previous decision and override switch */
+		if ( 1==power ) {
+			/* should be on based on voltage / time */
 			contactor_on();
-		} else {
-			contactor_off();
-		}
 
+			/* no LED blinking required */
+			ledBlink=0;
+		} else if ( ! input(SW_OVERRIDE) ) {
+			/* shouldn't be on based on voltage / time, but override switch has us on */
+			contactor_on();
+
+			/* blink LED to indicate we are overriden */
+			ledBlink=1;
+		} else {
+			/* shouldn't be on based on voltage / time */
+			contactor_off();
+
+			/* no LED blinking required */
+			ledBlink=0;
+		}
+		
+		/* determine contactor state for next loop */
 		if ( decide_now ) {
 			decide_now=0;
 
@@ -291,7 +310,7 @@ void main(void) {
 					output_low(LED_STATUS);
 				}
 			} else {
-				on_delay = 5; /* 5 seconds before re-connecting */
+				on_delay = ON_DELAY_SECONDS; /* 5 seconds before re-connecting */
 			}
 		
 			if ( adc < configuration_lvd ) {
