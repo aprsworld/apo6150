@@ -268,27 +268,6 @@ void main(void) {
 	/* main loop */
 	for ( ; ; ) {
 		restart_wdt();
-
-		/* set the contactor based on previous decision and override switch */
-		if ( 1==power ) {
-			/* should be on based on voltage / time */
-			contactor_on();
-
-			/* no LED blinking required */
-			ledBlink=0;
-		} else if ( ! input(SW_OVERRIDE) ) {
-			/* shouldn't be on based on voltage / time, but override switch has us on */
-			contactor_on();
-
-			/* blink LED to indicate we are overriden */
-			ledBlink=1;
-		} else {
-			/* shouldn't be on based on voltage / time */
-			contactor_off();
-
-			/* no LED blinking required */
-			ledBlink=0;
-		}
 		
 		/* determine contactor state for next loop */
 		if ( decide_now ) {
@@ -326,5 +305,29 @@ void main(void) {
 			}
 			restart_wdt();
 		}
+
+
+		/* set the contactor based on previous decision and override switch */
+		if ( 1==power ) {
+			/* should be on based on voltage / time */
+			contactor_on();
+
+			/* no LED blinking required */
+			ledBlink=0;
+		} else if ( ! input(SW_OVERRIDE) ) {
+			/* shouldn't be on based on voltage / time, but override switch has us on */
+			contactor_on();
+
+			/* blink LED to indicate we are overriden */
+			ledBlink=1;
+		} else {
+			/* shouldn't be on based on voltage / time */
+			contactor_off();
+
+			/* no LED blinking required */
+			ledBlink=0;
+		}
+
+
 	}
 }

@@ -1,4 +1,4 @@
-CCS PCM C Compiler, Version 4.090, 47882               09-Nov-18 11:00
+CCS PCM C Compiler, Version 4.090, 47882               09-Nov-18 11:38
 
                Filename: apo6150.lst
 
@@ -202,7 +202,7 @@ CCS PCM C Compiler, Version 4.090, 47882               09-Nov-18 11:00
 015C:  CLRF   36
 .................... 	} 
 .................... } 
-015D:  GOTO   18E (RETURN)
+015D:  GOTO   1D8 (RETURN)
 ....................  
 ....................  
 ....................  
@@ -676,155 +676,158 @@ CCS PCM C Compiler, Version 4.090, 47882               09-Nov-18 11:00
 .................... 	for ( ; ; ) { 
 .................... 		restart_wdt(); 
 017D:  CLRWDT
-....................  
-.................... 		/* set the contactor based on previous decision and override switch */ 
-.................... 		if ( 1==power ) { 
-017E:  MOVLW  00
-017F:  BTFSC  3D.0
-0180:  MOVLW  01
-0181:  SUBLW  01
-0182:  BTFSS  03.2
-0183:  GOTO   187
-.................... 			/* should be on based on voltage / time */ 
-.................... 			contactor_on(); 
-0184:  CALL   14C
-....................  
-.................... 			/* no LED blinking required */ 
-.................... 			ledBlink=0; 
-0185:  CLRF   37
-.................... 		} else if ( ! input(SW_OVERRIDE) ) { 
-0186:  GOTO   18F
-0187:  BTFSC  05.4
-0188:  GOTO   18D
-.................... 			/* shouldn't be on based on voltage / time, but override switch has us on */ 
-.................... 			contactor_on(); 
-0189:  CALL   14C
-....................  
-.................... 			/* blink LED to indicate we are overriden */ 
-.................... 			ledBlink=1; 
-018A:  MOVLW  01
-018B:  MOVWF  37
-.................... 		} else { 
-018C:  GOTO   18F
-.................... 			/* shouldn't be on based on voltage / time */ 
-.................... 			contactor_off(); 
-018D:  GOTO   155
-....................  
-.................... 			/* no LED blinking required */ 
-.................... 			ledBlink=0; 
-018E:  CLRF   37
-.................... 		} 
 .................... 		 
 .................... 		/* determine contactor state for next loop */ 
 .................... 		if ( decide_now ) { 
-018F:  MOVF   2E,F
-0190:  BTFSC  03.2
-0191:  GOTO   1D9
+017E:  MOVF   2E,F
+017F:  BTFSC  03.2
+0180:  GOTO   1C8
 .................... 			decide_now=0; 
-0192:  CLRF   2E
+0181:  CLRF   2E
 ....................  
 .................... 			adc=read_adc_average(VSENSE_ADC); 
-0193:  MOVLW  07
-0194:  MOVWF  3F
-0195:  CALL   065
-0196:  MOVF   22,W
-0197:  MOVWF  39
-0198:  MOVF   21,W
-0199:  MOVWF  38
+0182:  MOVLW  07
+0183:  MOVWF  3F
+0184:  CALL   065
+0185:  MOVF   22,W
+0186:  MOVWF  39
+0187:  MOVF   21,W
+0188:  MOVWF  38
 .................... 	 
 .................... 			if ( adc > configuration_lvd ) 
-019A:  MOVF   30,W
-019B:  SUBWF  39,W
-019C:  BTFSS  03.0
-019D:  GOTO   1A6
-019E:  BTFSS  03.2
-019F:  GOTO   1A4
-01A0:  MOVF   38,W
-01A1:  SUBWF  2F,W
-01A2:  BTFSC  03.0
-01A3:  GOTO   1A6
+0189:  MOVF   30,W
+018A:  SUBWF  39,W
+018B:  BTFSS  03.0
+018C:  GOTO   195
+018D:  BTFSS  03.2
+018E:  GOTO   193
+018F:  MOVF   38,W
+0190:  SUBWF  2F,W
+0191:  BTFSC  03.0
+0192:  GOTO   195
 .................... 				output_high(VGOOD); 
-01A4:  BSF    07.2
+0193:  BSF    07.2
 .................... 			else 
-01A5:  GOTO   1A7
+0194:  GOTO   196
 .................... 				output_low(VGOOD); 
-01A6:  BCF    07.2
+0195:  BCF    07.2
 .................... 	 
 .................... 	 
 .................... 			if ( adc > configuration_lvr ) { 
-01A7:  MOVF   32,W
-01A8:  SUBWF  39,W
-01A9:  BTFSS  03.0
-01AA:  GOTO   1B9
-01AB:  BTFSS  03.2
-01AC:  GOTO   1B1
-01AD:  MOVF   38,W
-01AE:  SUBWF  31,W
-01AF:  BTFSC  03.0
-01B0:  GOTO   1B9
+0196:  MOVF   32,W
+0197:  SUBWF  39,W
+0198:  BTFSS  03.0
+0199:  GOTO   1A8
+019A:  BTFSS  03.2
+019B:  GOTO   1A0
+019C:  MOVF   38,W
+019D:  SUBWF  31,W
+019E:  BTFSC  03.0
+019F:  GOTO   1A8
 .................... 				if ( on_delay > 0 ) { 
-01B1:  MOVF   3A,F
-01B2:  BTFSC  03.2
-01B3:  GOTO   1B6
+01A0:  MOVF   3A,F
+01A1:  BTFSC  03.2
+01A2:  GOTO   1A5
 .................... 					on_delay--; 
-01B4:  DECF   3A,F
+01A3:  DECF   3A,F
 .................... 				} else { 
-01B5:  GOTO   1B8
+01A4:  GOTO   1A7
 .................... 					power=1; 
-01B6:  BSF    3D.0
+01A5:  BSF    3D.0
 .................... 					output_low(LED_STATUS); 
-01B7:  BCF    07.5
+01A6:  BCF    07.5
 .................... 				} 
 .................... 			} else { 
-01B8:  GOTO   1BB
+01A7:  GOTO   1AA
 .................... 				on_delay = ON_DELAY_SECONDS; /* 5 seconds before re-connecting */ 
-01B9:  MOVLW  05
-01BA:  MOVWF  3A
+01A8:  MOVLW  05
+01A9:  MOVWF  3A
 .................... 			} 
 .................... 		 
 .................... 			if ( adc < configuration_lvd ) { 
-01BB:  MOVF   39,W
-01BC:  SUBWF  30,W
-01BD:  BTFSS  03.0
-01BE:  GOTO   1D4
-01BF:  BTFSS  03.2
-01C0:  GOTO   1C5
-01C1:  MOVF   2F,W
-01C2:  SUBWF  38,W
-01C3:  BTFSC  03.0
-01C4:  GOTO   1D4
+01AA:  MOVF   39,W
+01AB:  SUBWF  30,W
+01AC:  BTFSS  03.0
+01AD:  GOTO   1C3
+01AE:  BTFSS  03.2
+01AF:  GOTO   1B4
+01B0:  MOVF   2F,W
+01B1:  SUBWF  38,W
+01B2:  BTFSC  03.0
+01B3:  GOTO   1C3
 .................... 				if ( off_delay > 0 ) { 
-01C5:  MOVF   3B,F
-01C6:  BTFSS  03.2
-01C7:  GOTO   1CB
-01C8:  MOVF   3C,F
-01C9:  BTFSC  03.2
-01CA:  GOTO   1D1
+01B4:  MOVF   3B,F
+01B5:  BTFSS  03.2
+01B6:  GOTO   1BA
+01B7:  MOVF   3C,F
+01B8:  BTFSC  03.2
+01B9:  GOTO   1C0
 .................... 					off_delay--; 
-01CB:  MOVF   3B,W
-01CC:  BTFSC  03.2
-01CD:  DECF   3C,F
-01CE:  DECF   3B,F
+01BA:  MOVF   3B,W
+01BB:  BTFSC  03.2
+01BC:  DECF   3C,F
+01BD:  DECF   3B,F
 .................... 					output_high(LED_STATUS); 
-01CF:  BSF    07.5
+01BE:  BSF    07.5
 .................... 				} else { 
-01D0:  GOTO   1D3
+01BF:  GOTO   1C2
 .................... 					power=0; 
-01D1:  BCF    3D.0
+01C0:  BCF    3D.0
 .................... 					output_low(LED_STATUS); 
-01D2:  BCF    07.5
+01C1:  BCF    07.5
 .................... 				} 
 .................... 			} else { 
-01D3:  GOTO   1D8
+01C2:  GOTO   1C7
 .................... 				off_delay = configuration_delay; 
-01D4:  MOVF   34,W
-01D5:  MOVWF  3C
-01D6:  MOVF   33,W
-01D7:  MOVWF  3B
+01C3:  MOVF   34,W
+01C4:  MOVWF  3C
+01C5:  MOVF   33,W
+01C6:  MOVWF  3B
 .................... 			} 
 .................... 			restart_wdt(); 
-01D8:  CLRWDT
+01C7:  CLRWDT
 .................... 		} 
+....................  
+....................  
+.................... 		/* set the contactor based on previous decision and override switch */ 
+.................... 		if ( 1==power ) { 
+01C8:  MOVLW  00
+01C9:  BTFSC  3D.0
+01CA:  MOVLW  01
+01CB:  SUBLW  01
+01CC:  BTFSS  03.2
+01CD:  GOTO   1D1
+.................... 			/* should be on based on voltage / time */ 
+.................... 			contactor_on(); 
+01CE:  CALL   14C
+....................  
+.................... 			/* no LED blinking required */ 
+.................... 			ledBlink=0; 
+01CF:  CLRF   37
+.................... 		} else if ( ! input(SW_OVERRIDE) ) { 
+01D0:  GOTO   1D9
+01D1:  BTFSC  05.4
+01D2:  GOTO   1D7
+.................... 			/* shouldn't be on based on voltage / time, but override switch has us on */ 
+.................... 			contactor_on(); 
+01D3:  CALL   14C
+....................  
+.................... 			/* blink LED to indicate we are overriden */ 
+.................... 			ledBlink=1; 
+01D4:  MOVLW  01
+01D5:  MOVWF  37
+.................... 		} else { 
+01D6:  GOTO   1D9
+.................... 			/* shouldn't be on based on voltage / time */ 
+.................... 			contactor_off(); 
+01D7:  GOTO   155
+....................  
+.................... 			/* no LED blinking required */ 
+.................... 			ledBlink=0; 
+01D8:  CLRF   37
+.................... 		} 
+....................  
+....................  
 .................... 	} 
 01D9:  GOTO   17D
 .................... } 
